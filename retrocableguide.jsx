@@ -307,15 +307,163 @@ function GuideLogo() {
   );
 }
 
-// --- NOW ON PANEL ---
-function NowOnPanel({ channel, programme }) {
+function createSeededRandom(seed) {
+  let value = (seed || 1) >>> 0;
+  return () => {
+    value = (value * 1664525 + 1013904223) >>> 0;
+    return value / 4294967296;
+  };
+}
+
+function PreviewTransitionOverlay({ type, reveal, durationMs, seed, children }) {
+  if (!type) {
+    return null;
+  }
+
+  const shellStyle = {
+    position: "absolute",
+    inset: 0,
+    pointerEvents: "none",
+    overflow: "hidden",
+  };
+
+  if (type === "blockDissolve") {
+    const columns = 8;
+    const rows = 6;
+    const random = createSeededRandom(seed);
+    const cells = [];
+
+    for (let row = 0; row < rows; row += 1) {
+      for (let col = 0; col < columns; col += 1) {
+        cells.push({
+          col,
+          row,
+          left: `${(col / columns) * 100}%`,
+          top: `${(row / rows) * 100}%`,
+          width: `${100 / columns}%`,
+          height: `${100 / rows}%`,
+          delay: Math.round(random() * durationMs * 0.75),
+        });
+      }
+    }
+
+    return (
+      <div style={shellStyle}>
+        {cells.map((cell, index) => (
+          <div
+            key={index}
+            style={{
+              position: "absolute",
+              left: cell.left,
+              top: cell.top,
+              width: cell.width,
+              height: cell.height,
+              overflow: "hidden",
+              opacity: reveal ? 1 : 0,
+              transition: `opacity 120ms steps(2, end) ${cell.delay}ms`,
+            }}
+          >
+            <div
+              style={{
+                position: "absolute",
+                width: `${columns * 100}%`,
+                height: `${rows * 100}%`,
+                left: `-${cell.col * 100}%`,
+                top: `-${cell.row * 100}%`,
+              }}
+            >
+              {children}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (type === "blindsHorizontal" || type === "blindsVertical") {
+    const count = 8;
+    const isHorizontal = type === "blindsHorizontal";
+    return (
+      <div style={shellStyle}>
+        {Array.from({ length: count }).map((_, index) => {
+          const delay = Math.round((durationMs * 0.45 * index) / count);
+          const sliceOffset = `${index * 100}%`;
+          return (
+            <div
+              key={index}
+              style={{
+                position: "absolute",
+                left: isHorizontal ? 0 : `${(index / count) * 100}%`,
+                top: isHorizontal ? `${(index / count) * 100}%` : 0,
+                width: isHorizontal ? "100%" : `${100 / count}%`,
+                height: isHorizontal ? `${100 / count}%` : "100%",
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  transform: isHorizontal
+                    ? `scaleY(${reveal ? 1 : 0})`
+                    : `scaleX(${reveal ? 1 : 0})`,
+                  transformOrigin: isHorizontal ? "center top" : "left center",
+                  transition: `transform 220ms steps(2, end) ${delay}ms`,
+                }}
+              >
+                <div
+                  style={{
+                    position: "absolute",
+                    width: isHorizontal ? "100%" : `${count * 100}%`,
+                    height: isHorizontal ? `${count * 100}%` : "100%",
+                    left: isHorizontal ? 0 : `-${sliceOffset}`,
+                    top: isHorizontal ? `-${sliceOffset}` : 0,
+                  }}
+                >
+                  {children}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
+  const wipeClips = {
+    wipeLeft: reveal ? "inset(0 0 0 0)" : "inset(0 0 0 100%)",
+    wipeRight: reveal ? "inset(0 0 0 0)" : "inset(0 100% 0 0)",
+    wipeUp: reveal ? "inset(0 0 0 0)" : "inset(100% 0 0 0)",
+    wipeDown: reveal ? "inset(0 0 0 0)" : "inset(0 0 100% 0)",
+  };
+
+  return (
+    <div
+      style={{
+        ...shellStyle,
+        clipPath: wipeClips[type] || "inset(0 0 0 0)",
+        transition: `clip-path ${durationMs}ms steps(10, end)`,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function NowOnPanelContent({ channel, programme }) {
   const channelNumber = channel ? `Ch. ${channel.num}` : "Ch. --";
   const logoUrl = channel?.logoUrl || "";
   const channelName = channel?.name || "No preview";
 
   return (
-    <div style={{ padding: "12px 16px 6px 16px", height: "100%" }}>
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "12px", marginBottom: "10px" }}>
+    <>
+      <div style={{
+        display: "flex",
+        alignItems: "flex-start",
+        justifyContent: "space-between",
+        gap: "12px",
+        marginBottom: "10px",
+      }}>
         <div style={{
           fontFamily: F_UI,
           fontWeight: 900,
@@ -354,6 +502,80 @@ function NowOnPanel({ channel, programme }) {
         textAlign: "center",
         lineHeight: 1.05,
       }}>{programme}</div>
+    </>
+  );
+}
+
+// --- NOW ON PANEL ---
+function NowOnPanel({ channel, programme }) {
+  const [displayedChannel, setDisplayedChannel] = useState(channel);
+  const [displayedProgramme, setDisplayedProgramme] = useState(programme);
+  const [incomingChannel, setIncomingChannel] = useState(null);
+  const [incomingProgramme, setIncomingProgramme] = useState("");
+  const [transitionActive, setTransitionActive] = useState(false);
+  const [transitionReveal, setTransitionReveal] = useState(false);
+  const [transitionType, setTransitionType] = useState(APP_CONFIG.previewTransitions?.[0] || "blockDissolve");
+  const [transitionSeed, setTransitionSeed] = useState(1);
+  const transitionIndexRef = useRef(0);
+  const durationMs = Math.max(100, Math.round((APP_CONFIG.previewTransitionSeconds || 1) * 1000));
+
+  useEffect(() => {
+    const nextChannelNum = channel?.num ?? null;
+    const displayedChannelNum = displayedChannel?.num ?? null;
+    const hasChanged = nextChannelNum !== displayedChannelNum || programme !== displayedProgramme;
+
+    if (!hasChanged) {
+      return undefined;
+    }
+
+    const configuredTransitions = APP_CONFIG.previewTransitions?.length
+      ? APP_CONFIG.previewTransitions
+      : ["blockDissolve"];
+    const nextType = APP_CONFIG.previewTransitionMode === "cycle"
+      ? configuredTransitions[transitionIndexRef.current++ % configuredTransitions.length]
+      : configuredTransitions[Math.floor(Math.random() * configuredTransitions.length)];
+
+    setTransitionType(nextType);
+    setTransitionSeed((nextChannelNum || 0) * 97 + (displayedChannelNum || 0) * 13 + Date.now());
+    setIncomingChannel(channel);
+    setIncomingProgramme(programme);
+    setTransitionActive(true);
+    setTransitionReveal(false);
+
+    const startTimer = setTimeout(() => {
+      setTransitionReveal(true);
+    }, 20);
+
+    const settleTimer = setTimeout(() => {
+      setDisplayedChannel(channel);
+      setDisplayedProgramme(programme);
+      setIncomingChannel(null);
+      setIncomingProgramme("");
+      setTransitionActive(false);
+      setTransitionReveal(false);
+    }, durationMs);
+
+    return () => {
+      clearTimeout(startTimer);
+      clearTimeout(settleTimer);
+    };
+  }, [channel, displayedChannel, displayedProgramme, durationMs, programme]);
+
+  return (
+    <div style={{ padding: "12px 16px 6px 16px", height: "100%", position: "relative", overflow: "hidden" }}>
+      <NowOnPanelContent channel={displayedChannel} programme={displayedProgramme} />
+      {transitionActive && incomingChannel ? (
+        <PreviewTransitionOverlay
+          type={transitionType}
+          reveal={transitionReveal}
+          durationMs={durationMs}
+          seed={transitionSeed}
+        >
+          <div style={{ position: "absolute", inset: 0, background: "#000066", padding: "12px 16px 6px 16px", overflow: "hidden" }}>
+            <NowOnPanelContent channel={incomingChannel} programme={incomingProgramme} />
+          </div>
+        </PreviewTransitionOverlay>
+      ) : null}
     </div>
   );
 }

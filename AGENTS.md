@@ -8,15 +8,23 @@
 - Main implementation file: `retrocableguide.jsx`
 - Main config file: `src/config.js`
 - Guide logo asset: `public/guide-logo.png`
+- Mosaic page: `src/mosaic.jsx`
 
 ## What Was Built
 
 - A PAL-era cable guide recreation in React/Vite.
 - Frame target is `720x576`.
+- The app now has three routes:
+  - `/` launcher
+  - `/guide` retro guide
+  - `/mosaic` mosaic wall
 - The top layout was rebuilt around a shared grid instead of ad hoc sections.
 - Live guide data now comes from configurable M3U and XMLTV feeds.
 - The main listings render from the full filtered channel set.
 - The top-left preview panel and video rotate over a configurable `previewChannels` subset.
+- The top-left preview info panel now supports configurable transition effects.
+- A separate mosaic page shows 12 outer live tiles plus a rotating centre promo tile.
+- Mosaic page audio can be overridden with a separate URL.
 - The right preview window now crops wider-than-`4:3` sources to fill the retro preview area.
 - The lower guide area uses shared column geometry so `START` and `CHANNEL` line up with the content rows.
 - Branding was changed from `NYNEX` to `ALEX`.
@@ -28,6 +36,8 @@
 - Safe-area thinking should apply mostly to text/graphics placement, not to collapsing the whole composition.
 - The main guide and preview channel rotation are separate concerns.
 - Preview channel logic must not affect the main listings set.
+- Guide preview transitions only apply to the top-left info panel, not the video window.
+- Mosaic page behavior must stay isolated from guide-page behavior.
 - Most UI chrome uses a Futura-style stack: `F_UI`.
 - Programme listing rows use Arial/Helvetica-style italic text: `F_MAIN`.
 
@@ -60,14 +70,21 @@ If proportions drift again, adjust these first instead of patching individual bl
 - Current `allowedGroups` are the UK groups.
 - `channelLimit: 0` means no guide cap.
 - `previewChannels` controls the rotating preview subset.
+- `previewTransitions`, `previewTransitionMode`, and `previewTransitionSeconds` control the top-left panel effect.
 - `previewVideoUrl` is an override; blank means use the current preview channel stream.
+- `previewCycleSeconds` is currently `15`.
+- `previewTransitionSeconds` is currently `1.2`.
+- `mosaicChannels` controls the 12-tile mosaic lineup.
+- `mosaicAudioUrl` is currently a Sky Radio MP3 stream override.
 - TS preview uses `mpegts.js`.
 - HLS preview uses `hls.js`.
+- Shared TS/HLS tile playback logic lives in `src/components/stream-media.jsx`.
 - The guide logo is now loaded from `public/guide-logo.png`.
 
 ## Known Remaining Issues / Likely Next Steps
 
 - Browser TS preview still needs real-world validation against all channels.
+- The transition set may still want editorial tuning; the framework is now configurable.
 - Calendar badge could still be pushed closer to the exact reference if needed.
 - Logo cell could still be refined if a more exact scribbled mark is desired.
 - Header colors and contrast may still want tiny calibration against additional captures.
@@ -76,6 +93,8 @@ If proportions drift again, adjust these first instead of patching individual bl
 ## Things Not To Break
 
 - Do not let preview-channel filtering mutate the main listings.
+- Do not let guide transitions affect the video window.
+- Do not let the mosaic page logic leak back into the guide page.
 - Do not go back to independent top/bottom layouts; keep the shared grid.
 - Do not replace the listing rows with a separate programme column.
 - Do not shrink everything globally to chase safe zones.

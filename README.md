@@ -7,9 +7,12 @@ The UI targets a `720x576` frame and recreates a 1990s cable listings look while
 ## Features
 
 - Retro guide UI tuned against reference captures
+- Separate launcher, guide, and mosaic pages
 - Shared grid layout for top panel and listings alignment
 - Configurable XMLTV + M3U feed ingestion
 - Configurable preview channel rotation
+- Configurable top-left preview info transitions
+- Mosaic page with rotating promo tile and separate audio override
 - Configurable guide logo image
 - TS playback via `mpegts.js`
 - HLS playback via `hls.js`
@@ -28,6 +31,12 @@ Production build:
 npm run build
 ```
 
+Routes:
+
+- `/` launcher page
+- `/guide` retro guide
+- `/mosaic` mosaic wall
+
 ## Configuration
 
 Main config lives in [src/config.js](./src/config.js).
@@ -42,8 +51,14 @@ Important options:
 - `timeFormat`: `"12h"` or `"24h"`
 - `previewChannels`: ordered list of channel numbers used for preview rotation
 - `previewCycleSeconds`: preview rotation interval
+- `previewTransitions`: top-left info-panel transition list
+- `previewTransitionMode`: `"random"` or `"cycle"`
+- `previewTransitionSeconds`: top-left transition duration
 - `previewVideoUrl`: optional fixed preview override; blank means use preview channel streams
 - `previewMuted`: preview audio policy
+- `mosaicChannels`: ordered list of mosaic channel numbers
+- `mosaicCycleSeconds`: promo tile rotation interval
+- `mosaicAudioUrl`: optional mosaic audio override
 - `guideLogoUrl`: configurable guide logo image
 - `fallbackToDemoData`: whether to use demo guide data if live feed loading fails
 
@@ -54,6 +69,7 @@ Important options:
 3. The app normalizes the feed into a simple guide payload.
 4. The listings render from the full filtered channel set.
 5. The preview panel rotates independently over `previewChannels`.
+6. The mosaic page resolves its own ordered `mosaicChannels` subset from the same guide payload.
 
 ## Preview Notes
 
@@ -61,6 +77,14 @@ Important options:
 - HLS manifests are played with `hls.js`.
 - Wider-than-`4:3` sources are cropped to fill the retro preview window.
 - If `previewVideoUrl` is set, it overrides the rotating preview channel streams.
+- The top-left guide info panel supports configurable wipes, blinds, and block-dissolve transitions.
+
+## Mosaic Notes
+
+- The mosaic page is a fixed `720x576` layout with 12 outer tiles and one large centre promo tile.
+- The centre promo rotates independently over `mosaicChannels`.
+- All visible mosaic video tiles are muted.
+- Page audio can be supplied by `mosaicAudioUrl` instead of the current promo channel.
 
 ## Assets
 
