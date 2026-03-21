@@ -1,5 +1,7 @@
 export const APP_CONFIG = {
-  guideLogoUrl: "/guide-logo.png",
+  guideStyle: "nynex",
+  guideBrand: "cable",
+  previewContentMode: "video",
   previewInfoMode: "rotate",
   previewVideoMode: "channel",
   previewFixedChannel: null,
@@ -30,4 +32,37 @@ export const APP_CONFIG = {
   stripNamePrefixes: true,
   channelLimit: 0,
   fallbackToDemoData: false,
+  crtEffect: true,
+  headerTagline: "Full listings on teletext",
+  promos: [
+    {
+      title: "Unique To {brand} Customers",
+      lines: ["USE YOUR REMOTE", "CONTROL AND YOU WILL"],
+      highlight: "ONLY BE CHARGED",
+      price: "£9.95",
+      footer: "Details on Channel 51",
+    },
+    {
+      title: "{brand} Pay Per View",
+      lines: ["SATURDAY NIGHT", "BIG FIGHT LIVE"],
+      highlight: "EXCLUSIVE TO CABLE",
+      price: "£14.95",
+      footer: "Order on Channel 51",
+    },
+    {
+      title: "{brand} Local Channels",
+      lines: ["YOUR LOCAL NEWS", "AND INFORMATION"],
+      highlight: "ONLY ON CABLE",
+      price: "",
+      footer: "Channel 52",
+    },
+    {
+      title: "Free Installation",
+      lines: ["TELL YOUR", "FRIENDS ABOUT", "{brand} CABLE"],
+      highlight: "AND RECEIVE",
+      price: "1 MONTH",
+      price2: "FREE",
+      footer: "Call 0800 000 CABLE",
+    },
+  ],
 };

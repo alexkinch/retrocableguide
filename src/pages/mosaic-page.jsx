@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { APP_CONFIG } from "../config.js";
 import { loadGuideData } from "../guide/client.js";
 import { StreamMedia } from "../components/stream-media.jsx";
+import { CrtOverlay } from "../components/crt-overlay.jsx";
 
 const FRAME_WIDTH = 720;
 const FRAME_HEIGHT = 576;
@@ -178,6 +179,7 @@ export default function MosaicPage() {
       />
 
       {audioUrl ? <StreamMedia url={audioUrl} muted={false} audioOnly /> : null}
+      <CrtOverlay />
     </div>
   );
 }

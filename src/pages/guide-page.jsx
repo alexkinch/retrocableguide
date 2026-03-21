@@ -1,10 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { APP_CONFIG } from "../config.js";
 import { loadGuideData } from "../guide/client.js";
+import { CrtOverlay } from "../components/crt-overlay.jsx";
 
 const F_MAIN = "Arial, Helvetica, sans-serif";
-const F_CONDENSED = "'Arial Narrow', Arial, Helvetica, sans-serif";
 const F_UI = "Futura, 'Futura PT', 'Century Gothic', Arial, sans-serif";
+const F_TELETEXT = "Georgia, Palatino, 'Times New Roman', serif";
+const IS_NYNEX = APP_CONFIG.guideStyle === "nynex";
+const SHOW_PROMOS = APP_CONFIG.previewContentMode === "promo";
 const FRAME_WIDTH = 720;
 const FRAME_HEIGHT = 576;
 const LEFT_PANEL_WIDTH = 287;
@@ -12,49 +15,40 @@ const RIGHT_PANEL_WIDTH = FRAME_WIDTH - LEFT_PANEL_WIDTH;
 const TOP_TOTAL_HEIGHT = Math.round(RIGHT_PANEL_WIDTH * 3 / 4);
 const TOP_TEXT_HEIGHT = 210;
 const CALENDAR_ROW_HEIGHT = TOP_TOTAL_HEIGHT - TOP_TEXT_HEIGHT;
-const HEADER_HEIGHT = 42;
+const HEADER_HEIGHT = 38;
 const BODY_HEIGHT = FRAME_HEIGHT - TOP_TOTAL_HEIGHT - HEADER_HEIGHT;
-const LISTING_SIDE_PADDING = 14;
-const START_COL_WIDTH = 118;
+const START_COL_WIDTH = 100;
 const LEFT_CHANNEL_WIDTH = LEFT_PANEL_WIDTH - START_COL_WIDTH;
 const NOW_HEADER_WIDTH = 148;
 const TELE_TEXT_WIDTH = FRAME_WIDTH - LEFT_PANEL_WIDTH - NOW_HEADER_WIDTH;
-const BODY_TEXT_WIDTH = FRAME_WIDTH - START_COL_WIDTH - 14;
+const BODY_TEXT_WIDTH = FRAME_WIDTH - START_COL_WIDTH - 8;
 const TEXT_OUTLINE = "1px 0 0 #000000, -1px 0 0 #000000, 0 1px 0 #000000, 0 -1px 0 #000000";
 
-const PROMOS = [
-  {
-    title: "Unique To NYNEX Customers",
-    lines: ["USE YOUR REMOTE", "CONTROL AND YOU WILL", ""],
-    highlight: "ONLY BE CHARGED",
-    price: "£9.95",
-    footer: "Details on Channel 51",
-  },
-  {
-    title: "NYNEX Pay Per View",
-    lines: ["SATURDAY NIGHT", "BIG FIGHT LIVE", ""],
-    highlight: "EXCLUSIVE TO CABLE",
-    price: "£14.95",
-    footer: "Order on Channel 51",
-  },
-  {
-    title: "NYNEX Local Channels",
-    lines: ["YOUR LOCAL NEWS", "AND INFORMATION", ""],
-    highlight: "ONLY ON CABLE",
-    price: "",
-    footer: "Channel 52",
-  },
-  {
-    title: "Free Installation",
-    lines: ["TELL YOUR", "FRIENDS ABOUT", "NYNEX CABLE"],
-    highlight: "AND RECEIVE",
-    price: "1 MONTH",
-    price2: "FREE",
-    footer: "Call 0800 000 CABLE",
-  },
-];
+const C_DEEP_BLUE = IS_NYNEX ? "#141850" : "#1a2060";
+const C_DARK_HEADER = IS_NYNEX ? "#0e2258" : "#162e6a";
+const C_YELLOW = "#e8d400";
+const C_CHANNEL_PEACH = "#e8a848";
+const C_ROW_EVEN = IS_NYNEX ? "#08082e" : "#0c0c34";
+const C_ROW_ODD = IS_NYNEX ? "#14145a" : "#1a1a62";
+const C_BORDER = IS_NYNEX ? "#3a5080" : "#4a6090";
+
+function resolveBrand(text) {
+  if (!text) return text;
+  return text.replace(/\{brand\}/gi, (APP_CONFIG.guideBrand || "cable").toUpperCase());
+}
+
+const PROMOS = (APP_CONFIG.promos || []).map(p => ({
+  ...p,
+  title: resolveBrand(p.title),
+  lines: (p.lines || []).map(resolveBrand),
+  highlight: resolveBrand(p.highlight),
+  price: resolveBrand(p.price),
+  price2: resolveBrand(p.price2),
+  footer: resolveBrand(p.footer),
+}));
 
 const DAYS = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
+const SHORT_DAYS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
 
 function pad(n) { return String(n).padStart(2, "0"); }
 
@@ -84,7 +78,7 @@ function countWrappedLines(label, title, maxWidth) {
     return 1;
   }
 
-  ctx.font = "italic 700 26px Arial";
+  ctx.font = "italic bold 26px Arial";
   const tokens = [label, ...title.split(/\s+/).filter(Boolean)];
   let lines = 1;
   let current = "";
@@ -161,7 +155,7 @@ function ChannelLogo({ logoUrl, alt, size = 28 }) {
 }
 
 function CalendarBadge({ date }) {
-  const day = DAYS[date.getDay()];
+  const day = IS_NYNEX ? SHORT_DAYS[date.getDay()] : DAYS[date.getDay()];
   const dateNum = date.getDate();
   const h = APP_CONFIG.timeFormat === "12h"
     ? String(date.getHours() % 12 || 12)
@@ -234,20 +228,31 @@ function CalendarBadge({ date }) {
         borderRadius: "50%",
         boxShadow: "inset 0 1px 0 rgba(255,224,169,0.35)",
       }} />
+      {/* Day-name banner strip */}
       <div style={{
         position: "absolute",
-        top: "18px",
-        left: 0,
-        right: 0,
-        color: "#2d1800",
-        fontFamily: "'Bodoni 72', 'Didot', 'Times New Roman', serif",
-        fontWeight: 900,
-        fontSize: "10px",
-        letterSpacing: "0px",
-        textAlign: "center",
-        lineHeight: 1,
-        textTransform: "uppercase",
-      }}>{day}</div>
+        top: "10px",
+        left: "4px",
+        right: "4px",
+        height: "16px",
+        background: "linear-gradient(180deg, #b85a18 0%, #9a4210 100%)",
+        borderRadius: "3px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        boxShadow: "0 1px 0 rgba(0,0,0,0.2)",
+      }}>
+        <span style={{
+          fontFamily: F_UI,
+          fontWeight: 900,
+          fontSize: IS_NYNEX ? "11px" : "8px",
+          color: "#fff8e0",
+          letterSpacing: IS_NYNEX ? "1.5px" : "0.5px",
+          textTransform: "uppercase",
+          textShadow: "0 1px 0 rgba(0,0,0,0.4)",
+          lineHeight: 1,
+        }}>{day}</span>
+      </div>
       <div style={{
         position: "absolute",
         top: "30px",
@@ -261,15 +266,16 @@ function CalendarBadge({ date }) {
         letterSpacing: "-1.4px",
         textShadow: "1px 1px 0 rgba(109,72,18,0.28)",
         textAlign: "center",
+        fontStyle: "normal",
       }}>{dateNum}</div>
       <div style={{
         position: "absolute",
-        bottom: "7px",
+        bottom: "5px",
         left: 0,
         right: 0,
-        fontFamily: F_UI,
+        fontFamily: F_MAIN,
         fontWeight: 700,
-        fontSize: "24px",
+        fontSize: "22px",
         color: "#221100",
         lineHeight: 1,
         letterSpacing: "-0.7px",
@@ -280,30 +286,145 @@ function CalendarBadge({ date }) {
 }
 
 function GuideLogo() {
+  const brand = (APP_CONFIG.guideBrand || "cable").toUpperCase();
   return (
     <div style={{
-      background: "#edf1f8",
+      background: "#ffffff",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      padding: "0",
       boxShadow: "2px 2px 0px #000",
-      border: "1px solid #1f285f",
+      border: "2px solid #1a2050",
       position: "relative",
       overflow: "hidden",
       width: "100%",
       height: `${CALENDAR_ROW_HEIGHT - 10}px`,
     }}>
-      <img
-        src={APP_CONFIG.guideLogoUrl}
-        alt="Alex Channel Guide"
-        style={{
-          width: "100%",
-          height: "100%",
-          objectFit: "cover",
-          display: "block",
-        }}
-      />
+      <div style={{
+        position: "absolute",
+        inset: 0,
+        background: "repeating-linear-gradient(135deg, rgba(180,190,220,0.18) 0px, rgba(180,190,220,0.18) 2px, transparent 2px, transparent 8px)",
+      }} />
+      <div style={{
+        position: "relative",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        lineHeight: 1,
+        textShadow: "none",
+      }}>
+        <span style={{
+          fontFamily: F_UI,
+          fontWeight: 900,
+          fontSize: "30px",
+          letterSpacing: "3px",
+          color: "#1a2668",
+        }}>{brand}</span>
+        <span style={{
+          fontFamily: "Georgia, 'Times New Roman', serif",
+          fontStyle: "italic",
+          fontWeight: 400,
+          fontSize: "14px",
+          color: "#333",
+          marginTop: "-1px",
+          letterSpacing: "0.5px",
+        }}>channel</span>
+        <span style={{
+          fontFamily: "Georgia, 'Times New Roman', serif",
+          fontStyle: "italic",
+          fontWeight: 700,
+          fontSize: "36px",
+          color: "#1a1a1a",
+          marginTop: "-6px",
+          letterSpacing: "0.5px",
+        }}>Guide</span>
+      </div>
+    </div>
+  );
+}
+
+function PromoPanel({ promoIndex }) {
+  const promo = PROMOS[promoIndex % PROMOS.length];
+  return (
+    <div style={{
+      position: "absolute",
+      inset: 0,
+      background: `linear-gradient(170deg, #10103a 0%, #0a0a30 40%, #060620 100%)`,
+      display: "flex",
+      flexDirection: "column",
+      justifyContent: "center",
+      alignItems: "center",
+      textAlign: "center",
+      padding: "14px 20px",
+      overflow: "hidden",
+    }}>
+      <div style={{
+        position: "absolute",
+        inset: 0,
+        background: "radial-gradient(ellipse at 50% 40%, rgba(40,40,100,0.35), transparent 70%)",
+        pointerEvents: "none",
+      }} />
+      <div style={{
+        position: "absolute",
+        inset: 0,
+        background: "repeating-linear-gradient(180deg, rgba(255,255,255,0.015) 0 1px, transparent 1px 3px)",
+        opacity: 0.4,
+        pointerEvents: "none",
+      }} />
+      <div style={{
+        fontFamily: F_UI,
+        fontWeight: 900,
+        fontSize: "22px",
+        color: C_YELLOW,
+        marginBottom: "10px",
+        letterSpacing: "0.5px",
+        textShadow: TEXT_OUTLINE,
+      }}>{promo.title}</div>
+      {promo.lines.filter(Boolean).map((line, i) => (
+        <div key={i} style={{
+          fontFamily: F_UI,
+          fontWeight: 700,
+          fontSize: "26px",
+          color: "#ffffff",
+          lineHeight: 1.3,
+          textShadow: TEXT_OUTLINE,
+        }}>{line}</div>
+      ))}
+      {promo.highlight && (
+        <div style={{
+          fontFamily: F_UI,
+          fontWeight: 900,
+          fontSize: "26px",
+          color: C_YELLOW,
+          marginTop: "6px",
+          lineHeight: 1.3,
+          textShadow: TEXT_OUTLINE,
+        }}>{promo.highlight}</div>
+      )}
+      {promo.price && (
+        <div style={{
+          fontFamily: F_UI,
+          fontWeight: 900,
+          fontSize: "44px",
+          color: "#ffffff",
+          marginTop: "4px",
+          lineHeight: 1.0,
+          textShadow: TEXT_OUTLINE,
+        }}>
+          {promo.price}
+          {promo.price2 && <div style={{ fontSize: "38px" }}>{promo.price2}</div>}
+        </div>
+      )}
+      {promo.footer && (
+        <div style={{
+          fontFamily: F_UI,
+          fontWeight: 400,
+          fontSize: "17px",
+          color: "#d0d0d8",
+          marginTop: "10px",
+          textShadow: TEXT_OUTLINE,
+        }}>{promo.footer}</div>
+      )}
     </div>
   );
 }
@@ -452,7 +573,7 @@ function PreviewTransitionOverlay({ type, reveal, durationMs, seed, children }) 
 }
 
 function NowOnPanelContent({ channel, programme }) {
-  const channelNumber = channel ? `Ch. ${channel.num}` : "Ch. --";
+  const channelNum = channel ? String(channel.num) : "--";
   const logoUrl = channel?.logoUrl || "";
   const channelName = channel?.name || "No preview";
 
@@ -462,45 +583,47 @@ function NowOnPanelContent({ channel, programme }) {
         display: "flex",
         alignItems: "flex-start",
         justifyContent: "space-between",
-        gap: "12px",
-        marginBottom: "10px",
+        gap: "6px",
+        marginBottom: IS_NYNEX ? "0px" : "4px",
       }}>
         <div style={{
           fontFamily: F_UI,
           fontWeight: 900,
           color: "#ffffff",
           lineHeight: 0.95,
-          width: "104px",
+          letterSpacing: "-0.5px",
+          width: IS_NYNEX ? "120px" : "104px",
           flexShrink: 0,
           display: "flex",
           flexDirection: "column",
           justifyContent: "flex-start",
-          gap: "4px",
-          marginTop: "8px",
+          gap: IS_NYNEX ? "0px" : "2px",
+          marginTop: IS_NYNEX ? "4px" : "6px",
           textAlign: "left",
         }}>
-          <div style={{ fontSize: "20px", fontStyle: "normal" }}>Now on</div>
-          <div style={{ fontSize: "28px", fontStyle: "normal", whiteSpace: "nowrap" }}>{channelNumber}</div>
+          <div style={{ fontSize: IS_NYNEX ? "22px" : "24px", fontStyle: IS_NYNEX ? "italic" : "normal", fontWeight: 900 }}>Now on</div>
+          <div style={{ fontSize: IS_NYNEX ? "17px" : "19px", fontStyle: IS_NYNEX ? "italic" : "normal", whiteSpace: "nowrap" }}>{IS_NYNEX ? "ch." : "Ch."} <span style={{ fontSize: IS_NYNEX ? "38px" : "34px", fontStyle: "normal" }}>{channelNum}</span></div>
         </div>
         <div style={{
-          width: "104px",
-          height: "70px",
+          width: IS_NYNEX ? "130px" : "120px",
+          height: IS_NYNEX ? "80px" : "90px",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           flexShrink: 0,
         }}>
-          <ChannelLogo logoUrl={logoUrl} alt={channelName} size={64} />
+          <ChannelLogo logoUrl={logoUrl} alt={channelName} size={IS_NYNEX ? 90 : 100} />
         </div>
       </div>
       <div style={{
         fontFamily: F_UI,
         fontWeight: 700,
         fontStyle: "normal",
-        fontSize: "24px",
+        fontSize: IS_NYNEX ? "22px" : "24px",
         color: "#ffffff",
-        marginTop: "8px",
-        textAlign: "center",
+        letterSpacing: "-0.5px",
+        marginTop: IS_NYNEX ? "10px" : "15px",
+        textAlign: "left",
         lineHeight: 1.05,
       }}>{programme}</div>
     </>
@@ -563,7 +686,7 @@ function NowOnPanel({ channel, programme }) {
   }, [channel, displayedChannel, displayedProgramme, durationMs, programme]);
 
   return (
-    <div style={{ padding: "12px 16px 6px 16px", height: "100%", position: "relative", overflow: "hidden" }}>
+    <div style={{ padding: "8px 10px 4px 10px", height: "100%", position: "relative", overflow: "hidden" }}>
       <NowOnPanelContent channel={displayedChannel} programme={displayedProgramme} />
       {transitionActive && incomingChannel ? (
         <PreviewTransitionOverlay
@@ -572,7 +695,7 @@ function NowOnPanel({ channel, programme }) {
           durationMs={durationMs}
           seed={transitionSeed}
         >
-          <div style={{ position: "absolute", inset: 0, background: "#000066", padding: "12px 16px 6px 16px", overflow: "hidden" }}>
+          <div style={{ position: "absolute", inset: 0, background: C_DEEP_BLUE, padding: "8px 10px 4px 10px", overflow: "hidden" }}>
             <NowOnPanelContent channel={incomingChannel} programme={incomingProgramme} />
           </div>
         </PreviewTransitionOverlay>
@@ -817,6 +940,7 @@ function LiveWindow({ channel, programme, videoUrl, onPlaybackError }) {
               objectFit: cropToFourThree ? "cover" : "contain",
               objectPosition: "center",
               background: "#000000",
+              filter: "brightness(0.9) contrast(0.95)",
               opacity: videoFailed || !videoUrl ? 0 : 1,
             }}
           />
@@ -879,8 +1003,8 @@ function LiveWindow({ channel, programme, videoUrl, onPlaybackError }) {
 function ChannelListing({ entries, phase, buildProgress }) {
   const visible = getVisibleEntries(entries, 6);
   return (
-    <div style={{ overflow: "hidden", height: "100%", background: "#0a0a44" }}>
-      <div style={{ padding: "6px 0 1px 0", height: "100%" }}>
+    <div style={{ overflow: "hidden", height: "100%", background: IS_NYNEX ? "#06062a" : "#0a0a38" }}>
+      <div style={{ padding: "0", height: "100%" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
           <colgroup>
             <col style={{ width: `${START_COL_WIDTH}px` }} />
@@ -895,35 +1019,38 @@ function ChannelListing({ entries, phase, buildProgress }) {
                 <tr key={`${phase}-${entry.num}-${i}`} style={{
                   opacity: isVisible ? 1 : 0,
                   transition: `opacity 0.1s ease ${i * 0.05}s`,
-                  background: i % 2 === 0 ? "#0c0c4a" : "#14146a",
+                  background: i % 2 === 0 ? C_ROW_EVEN : C_ROW_ODD,
+                  borderBottom: `2px solid ${C_BORDER}`,
                 }}>
                   <td style={{
                     width: `${START_COL_WIDTH}px`,
-                    padding: "0 12px 0 0",
+                    padding: "1px 6px 1px 0",
                     verticalAlign: "top",
                     fontFamily: F_MAIN,
                     fontWeight: 700,
                     fontStyle: "italic",
                     fontSize: "26px",
-                    lineHeight: 1.16,
+                    lineHeight: 1.04,
+                    letterSpacing: "-0.5px",
                     color: "#ffffff",
                     whiteSpace: "nowrap",
                     textAlign: "right",
-                    borderRight: "2px solid #6079ad",
+                    borderRight: `2px solid ${C_BORDER}`,
                   }}>{entry.start}</td>
                   <td style={{
-                    padding: "0 0 0 14px",
+                    padding: "1px 0 1px 8px",
                     verticalAlign: "top",
                     fontFamily: F_MAIN,
                     fontWeight: 700,
                     fontStyle: "italic",
                     fontSize: "26px",
-                    lineHeight: 1.16,
+                    lineHeight: 1.04,
+                    letterSpacing: "-0.5px",
                     color: "#ffffff",
                     textAlign: "left",
                   }}>
-                    <span style={{ color: "#ffff00", whiteSpace: "nowrap" }}>{label}</span>
-                    <span> {entry.title}</span>
+                    <span style={{ color: IS_NYNEX ? C_CHANNEL_PEACH : C_YELLOW, whiteSpace: "nowrap" }}>{label}</span>
+                    <span style={{ fontWeight: 400 }}> {entry.title}</span>
                   </td>
                 </tr>
               );
@@ -939,6 +1066,7 @@ function ChannelListing({ entries, phase, buildProgress }) {
 export default function RetroCableGuide() {
   const [now, setNow] = useState(new Date());
   const [previewIndex, setPreviewIndex] = useState(0);
+  const [promoIndex, setPromoIndex] = useState(0);
   const [listingPhase, setListingPhase] = useState("now");
   const [buildProgress, setBuildProgress] = useState(0);
   const [listingEntries, setListingEntries] = useState([]);
@@ -1001,6 +1129,18 @@ export default function RetroCableGuide() {
     return () => clearInterval(t);
   }, [previewChannelKey]);
 
+  // Promo rotation
+  useEffect(() => {
+    if (!SHOW_PROMOS || PROMOS.length <= 1) {
+      return undefined;
+    }
+
+    const t = setInterval(() => {
+      setPromoIndex(prev => (prev + 1) % PROMOS.length);
+    }, (APP_CONFIG.previewCycleSeconds || 30) * 1000);
+    return () => clearInterval(t);
+  }, []);
+
   // Build listing entries
   const buildEntries = useCallback((phase) => {
     return channels.map(ch => {
@@ -1058,7 +1198,7 @@ export default function RetroCableGuide() {
       width: "720px",
       height: "576px",
       margin: "0 auto",
-      background: "#000033",
+      background: "#0a0a2e",
       position: "relative",
       overflow: "hidden",
       display: "grid",
@@ -1069,9 +1209,9 @@ export default function RetroCableGuide() {
       <div style={{
         gridColumn: "1 / 3",
         gridRow: "1 / 2",
-        background: "#000066",
-        borderRight: "3px solid #ffffff",
-        borderBottom: "2px solid #0f1a63",
+        background: C_DEEP_BLUE,
+        borderRight: "2px solid #2a3578",
+        borderBottom: "2px solid #0f1a50",
       }}>
         <NowOnPanel channel={infoChannel} programme={currentProg.title} />
       </div>
@@ -1081,23 +1221,27 @@ export default function RetroCableGuide() {
         gridRow: "1 / 3",
         position: "relative",
         overflow: "hidden",
-        background: "#1a0000",
-        borderBottom: "3px solid #ffffff",
+        background: SHOW_PROMOS ? C_DEEP_BLUE : "#1a0000",
+        borderBottom: "2px solid #2a3578",
       }}>
-        <LiveWindow
-          channel={videoChannel || infoChannel}
-          programme={currentProg.title}
-          videoUrl={previewVideoUrl}
-        />
+        {SHOW_PROMOS ? (
+          <PromoPanel promoIndex={promoIndex} />
+        ) : (
+          <LiveWindow
+            channel={videoChannel || infoChannel}
+            programme={currentProg.title}
+            videoUrl={previewVideoUrl}
+          />
+        )}
       </div>
 
       <div style={{
         gridColumn: "1 / 2",
         gridRow: "2 / 3",
-        background: "#000066",
+        background: C_DEEP_BLUE,
         padding: "1px 3px 3px 4px",
-        borderRight: "2px solid #0f1a63",
-        borderBottom: "3px solid #ffffff",
+        borderRight: "2px solid #0f1a50",
+        borderBottom: "2px solid #2a3578",
       }}>
         <CalendarBadge date={now} />
       </div>
@@ -1105,10 +1249,10 @@ export default function RetroCableGuide() {
       <div style={{
         gridColumn: "2 / 3",
         gridRow: "2 / 3",
-        background: "#000066",
+        background: C_DEEP_BLUE,
         padding: "1px 4px 3px 3px",
-        borderRight: "3px solid #ffffff",
-        borderBottom: "3px solid #ffffff",
+        borderRight: "2px solid #2a3578",
+        borderBottom: "2px solid #2a3578",
       }}>
         <GuideLogo />
       </div>
@@ -1116,64 +1260,77 @@ export default function RetroCableGuide() {
       <div style={{
         gridColumn: "1 / 2",
         gridRow: "3 / 4",
-        background: "#7594c8",
-        borderRight: "2px solid #6079ad",
-        borderBottom: "3px solid #ffffff",
+        background: C_DARK_HEADER,
+        borderTop: "2px solid #4a6090",
+        borderRight: "2px solid #4a6090",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
+        paddingLeft: "4px",
         fontFamily: F_UI,
         fontWeight: 900,
         fontSize: "18px",
+        letterSpacing: "-0.5px",
         color: "#ffffff",
       }}>START</div>
 
       <div style={{
         gridColumn: "2 / 3",
         gridRow: "3 / 4",
-        background: "#6788c4",
-        borderRight: "2px solid #6079ad",
-        borderBottom: "3px solid #ffffff",
+        background: C_DARK_HEADER,
+        borderTop: "2px solid #4a6090",
+        borderRight: "2px solid #4a6090",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         fontFamily: F_UI,
         fontWeight: 900,
         fontSize: "18px",
+        letterSpacing: "-0.5px",
         color: "#ffffff",
       }}>CHANNEL</div>
 
       <div style={{
         gridColumn: "3 / 4",
         gridRow: "3 / 4",
-        background: "#1b3d86",
-        borderBottom: "3px solid #ffffff",
+        background: C_DARK_HEADER,
+        borderTop: "2px solid #4a6090",
+        borderRight: "2px solid #4a6090",
         display: "flex",
         alignItems: "center",
-        justifyContent: "space-between",
-        padding: "0 10px",
+        justifyContent: IS_NYNEX ? "center" : "space-between",
+        padding: "0 8px",
         fontFamily: F_UI,
         fontWeight: 900,
         fontSize: "18px",
+        letterSpacing: "-0.5px",
       }}>
-        <span style={{ color: listingPhase === "next" ? "#ffff00" : "#203468", textAlign: "left" }}>NOW</span>
-        <span style={{ color: listingPhase === "now" ? "#ffff00" : "#203468", textAlign: "right" }}>NEXT</span>
+        {IS_NYNEX ? (
+          <span style={{ color: C_YELLOW }}>{listingPhase === "now" ? "NOW" : "NEXT"}</span>
+        ) : (
+          <>
+            <span style={{ color: listingPhase === "now" ? C_YELLOW : "#6878a0" }}>NOW</span>
+            <span style={{ color: listingPhase === "next" ? C_YELLOW : "#6878a0" }}>NEXT</span>
+          </>
+        )}
       </div>
 
       <div style={{
         gridColumn: "4 / 5",
         gridRow: "3 / 4",
-        background: "#1917af",
-        borderBottom: "3px solid #ffffff",
+        background: C_DARK_HEADER,
+        borderTop: "2px solid #4a6090",
         display: "flex",
         alignItems: "center",
-        paddingLeft: "12px",
-        fontFamily: F_UI,
-        fontWeight: 900,
-        fontSize: "18px",
-        color: "#ffff00",
+        paddingLeft: "8px",
+        fontFamily: IS_NYNEX ? F_TELETEXT : F_UI,
+        fontWeight: IS_NYNEX ? 400 : 900,
+        fontStyle: IS_NYNEX ? "italic" : "normal",
+        fontSize: IS_NYNEX ? "16px" : "17px",
+        letterSpacing: IS_NYNEX ? "0.2px" : "-0.5px",
+        color: IS_NYNEX ? "#d8d4c8" : C_YELLOW,
         ...ONE_LINE,
-      }}>Full listings on teletext</div>
+      }}>{APP_CONFIG.headerTagline || ""}</div>
 
       <div style={{
         gridColumn: "1 / 5",
@@ -1182,6 +1339,8 @@ export default function RetroCableGuide() {
       }}>
         <ChannelListing entries={listingEntries} phase={listingPhase} buildProgress={buildProgress} />
       </div>
+
+      <CrtOverlay />
     </div>
   );
 }

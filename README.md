@@ -1,29 +1,37 @@
-# retrocableguide
+# Retro Cable Guide
 
-A PAL-era cable guide recreation built with React and Vite.
-
-The UI targets a `720x576` frame and recreates a 1990s cable listings look while loading live channel and programme data from configurable M3U and XMLTV feeds.
+A PAL-era cable TV guide recreation built with React and Vite. The UI targets a 720x576 frame and faithfully recreates the look of 1990s UK cable listings channels, loading live channel and programme data from configurable M3U and XMLTV feeds.
 
 ## Features
 
-- Retro guide UI tuned against reference captures
-- Separate launcher, guide, and mosaic pages
-- Shared grid layout for top panel and listings alignment
-- Configurable XMLTV + M3U feed ingestion
-- Configurable preview channel rotation
-- Configurable top-left preview info transitions
-- Mosaic page with rotating promo tile and separate audio override
-- Configurable guide logo image
-- TS playback via `mpegts.js`
-- HLS playback via `hls.js`
-- Configurable `12h` or `24h` time formatting
+- Two selectable visual styles: **Nynex** (default) and **Telewest**, toggled via config
+- Configurable branding — set `guideBrand` once and the logo, promos, and launcher all update
+- Logo rendered in code from config, no image asset required
+- Rotating promo slideshow or live video preview, independently configurable
+- Configurable preview channel rotation with wipe, blinds, and block-dissolve transitions
+- Mosaic page with 12 outer live tiles, a rotating centre promo tile, and separate audio override
+- Optional whole-frame CRT overlay (scanlines, vignette, phosphor bloom) for browser viewing
+- Live XMLTV + M3U feed ingestion with configurable refresh interval
+- TS playback via `mpegts.js`, HLS playback via `hls.js`
+- 12h or 24h time formatting
+- Shared grid layout ensuring `START` and `CHANNEL` headers align with listing rows
 
-## Running Locally
+## Routes
+
+| Path | Description |
+|------|-------------|
+| `/` | Branded launcher with guide and mosaic links |
+| `/guide` | Retro cable guide with live listings |
+| `/mosaic` | 12-tile mosaic wall with rotating centre promo |
+
+## Getting Started
 
 ```bash
 npm install
 npm run dev
 ```
+
+The dev server starts at `http://localhost:5175` by default.
 
 Production build:
 
@@ -31,70 +39,124 @@ Production build:
 npm run build
 ```
 
-Routes:
-
-- `/` launcher page
-- `/guide` retro guide
-- `/mosaic` mosaic wall
+The built output lands in `dist/` and can be served statically.
 
 ## Configuration
 
-Main config lives in [src/config.js](./src/config.js).
+All settings live in [`src/config.js`](./src/config.js). Edit the `APP_CONFIG` export to customise the guide.
 
-Important options:
+### Branding & Style
 
-- `m3uUrl`: playlist source
-- `xmltvUrl`: XMLTV source
-- `proxyPath`: guide API path, normally `/api/guide`
-- `allowedGroups`: M3U `group-title` values to include
-- `channelLimit`: `0` means no limit
-- `timeFormat`: `"12h"` or `"24h"`
-- `previewChannels`: ordered list of channel numbers used for preview rotation
-- `previewCycleSeconds`: preview rotation interval
-- `previewInfoMode`: `"rotate"` or `"fixed"` for the top-left panel
-- `previewVideoMode`: `"channel"` or `"url"` for the large preview window
-- `previewFixedChannel`: optional fixed channel number when info mode is not rotating
-- `previewTransitions`: top-left info-panel transition list
-- `previewTransitionMode`: `"random"` or `"cycle"`
-- `previewTransitionSeconds`: top-left transition duration
-- `previewVideoUrl`: optional fixed preview override; blank means use preview channel streams
-- `previewMuted`: preview audio policy
-- `mosaicChannels`: ordered list of mosaic channel numbers
-- `mosaicCycleSeconds`: promo tile rotation interval
-- `mosaicAudioUrl`: optional mosaic audio override
-- `guideLogoUrl`: configurable guide logo image
-- `fallbackToDemoData`: whether to use demo guide data if live feed loading fails
+| Key | Default | Description |
+|-----|---------|-------------|
+| `guideStyle` | `"nynex"` | Visual style: `"nynex"` or `"telewest"` |
+| `guideBrand` | `"cable"` | Brand name used in the rendered logo, launcher, and promo text |
+| `crtEffect` | `false` | Whole-frame CRT overlay on all routes |
+| `headerTagline` | `"Full listings on teletext"` | Text in the guide header's rightmost cell |
+
+### Preview
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `previewContentMode` | `"video"` | Top-right box content: `"video"` or `"promo"` |
+| `previewInfoMode` | `"rotate"` | Top-left panel: `"rotate"` or `"fixed"` |
+| `previewVideoMode` | `"channel"` | Large preview source: `"channel"` or `"url"` |
+| `previewFixedChannel` | `null` | Pin to a specific channel number when not rotating |
+| `previewVideoUrl` | `""` | Fixed preview URL override (blank = use channel stream) |
+| `previewChannels` | `[401..410]` | Channel numbers for preview rotation |
+| `previewCycleSeconds` | `15` | Rotation interval in seconds |
+| `previewTransitions` | `[…]` | Transition effect list for the info panel |
+| `previewTransitionMode` | `"random"` | `"random"` or `"cycle"` |
+| `previewTransitionSeconds` | `1.2` | Transition duration |
+| `previewMuted` | `false` | Whether preview video starts muted |
+
+### Mosaic
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `mosaicChannels` | `[401..412]` | Ordered channel numbers for the 12 mosaic tiles |
+| `mosaicCycleSeconds` | `30` | Centre promo tile rotation interval |
+| `mosaicAudioUrl` | `"…"` | Audio stream override (blank = use promo channel audio) |
+
+### Feeds
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `m3uUrl` | `"…"` | M3U playlist endpoint |
+| `xmltvUrl` | `"…"` | XMLTV EPG endpoint |
+| `proxyPath` | `"/api/guide"` | Local proxy path for guide data |
+| `refreshMinutes` | `5` | Feed refresh interval |
+| `allowedGroups` | `[…]` | M3U `group-title` values to include |
+| `stripNamePrefixes` | `true` | Strip common channel name prefixes |
+| `channelLimit` | `0` | Max channels (`0` = no limit) |
+| `timeFormat` | `"12h"` | `"12h"` or `"24h"` |
+| `fallbackToDemoData` | `false` | Use demo data if live feeds fail |
+
+### Promos
+
+The `promos` array in config defines the rotating promo slides. Text fields support `{brand}` tokens that resolve to the uppercase `guideBrand` at runtime:
+
+```js
+promos: [
+  {
+    title: "{brand} Pay Per View",
+    lines: ["SATURDAY NIGHT", "BIG FIGHT LIVE"],
+    highlight: "EXCLUSIVE TO CABLE",
+    price: "£14.95",
+    footer: "Order on Channel 51",
+  },
+],
+```
 
 ## Data Flow
 
-1. The Vite server exposes `/api/guide`.
+1. The Vite dev server exposes `/api/guide`.
 2. That endpoint fetches the configured M3U and XMLTV feeds.
-3. The app normalizes the feed into a simple guide payload.
+3. The app normalises the feed into a simple guide payload.
 4. The listings render from the full filtered channel set.
 5. The preview panel rotates independently over `previewChannels`.
 6. The mosaic page resolves its own ordered `mosaicChannels` subset from the same guide payload.
 
-## Preview Notes
+## Preview Playback
 
-- Raw TS preview streams are played in-browser with `mpegts.js`.
+- Raw TS streams are played in-browser with `mpegts.js`.
 - HLS manifests are played with `hls.js`.
-- Wider-than-`4:3` sources are cropped to fill the retro preview window.
-- The top-left panel and the large preview window are controlled independently.
-- `previewVideoMode: "url"` lets the guide use a fixed local/remote preview source while the top-left panel can still rotate over live channel data.
-- The top-left guide info panel supports configurable wipes, blinds, and block-dissolve transitions.
+- Wider-than-4:3 sources are cropped to fill the retro preview window.
+- The top-left info panel and the large preview window are controlled independently — `previewVideoMode: "url"` lets the guide use a fixed local/remote preview source while the info panel rotates over live channel data.
+- The info panel supports configurable wipes, blinds, and block-dissolve transitions.
 
-## Mosaic Notes
+## Project Structure
 
-- The mosaic page is a fixed `720x576` layout with 12 outer tiles and one large centre promo tile.
-- The centre promo rotates independently over `mosaicChannels`.
-- All visible mosaic video tiles are muted.
-- Page audio can be supplied by `mosaicAudioUrl` instead of the current promo channel.
+```
+src/
+├── config.js                  # All runtime configuration
+├── main.jsx                   # Router and launcher page
+├── components/
+│   ├── crt-overlay.jsx        # Shared CRT effect overlay
+│   └── stream-media.jsx       # Shared TS/HLS playback component
+├── guide/
+│   ├── client.js              # Guide data fetcher
+│   ├── xmltv.js               # XMLTV parser
+│   └── demoData.js            # Fallback demo data
+└── pages/
+    ├── guide-page.jsx         # Main retro guide page
+    └── mosaic-page.jsx        # Mosaic wall page
+```
 
-## Assets
+## Useful Commands
 
-- Guide logo: [public/guide-logo.png](./public/guide-logo.png)
-- SVG source: [public/guide-logo.svg](./public/guide-logo.svg)
+Transcode a browser-friendly 4:3 preview file:
 
-## Reference / Handoff
+```bash
+ffmpeg -i video.mp4 -vf "scale=768:576:flags=lanczos,setsar=1,setdar=4/3" -c:v libx264 -crf 18 -preset slow -pix_fmt yuv420p -c:a aac -b:a 192k public/video.mp4
+```
 
-Project-specific handoff notes live in [AGENTS.md](./AGENTS.md).
+Inspect live guide data:
+
+```bash
+curl -s http://127.0.0.1:5175/api/guide
+```
+
+## Handoff
+
+Project-specific handoff notes and design constraints live in [AGENTS.md](./AGENTS.md).
