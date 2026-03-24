@@ -31,7 +31,7 @@ export const APP_CONFIG = {
   allowedGroups: ["UK - Documentaries", "UK - Entertainment", "UK - Movies", "UK - Sports"],
   stripNamePrefixes: true,
   channelLimit: 0,
-  fallbackToDemoData: false,
+  fallbackToDemoData: true,
   crtEffect: true,
   headerTagline: "Full listings on teletext",
   promos: [
