@@ -1,40 +1,49 @@
 import { CC, cc, buildCarousel, buildPage } from "./tti-writer.mjs";
 import {
-  separatorRow,
   doubleHeightRows,
   headerRow,
   textRow,
   dotLeader,
+  center,
+  pad,
 } from "./page-builder.mjs";
 
-const CHANNELS_PER_COLUMN = 17; // rows 4-20
+const CHANNELS_PER_COLUMN = 15; // rows 4-18
 const COLUMNS = 2;
 const CHANNELS_PER_PAGE = CHANNELS_PER_COLUMN * COLUMNS;
-const COL_WIDTH = 19; // 40 cols - 1 colour code - 1 space between = 38 / 2 = 19
+const COL_WIDTH = 19;
 
 function buildIndexSubpage(channels, subpageIndex, totalSubpages, config) {
   const rows = [];
 
-  // Row 0: service name + page number right-aligned
+  // Row 0: service name + page number
   rows.push(headerRow(config.serviceName, 0x100));
 
-  // Row 1: red separator bar
-  rows.push(separatorRow(1, CC.MOSAIC_RED));
+  // Row 1-2: yellow double-height title on blue background, centered, full width
+  // The blue bg extends full width because the mosaic blue + NEW_BG fills the row
+  const titleText = center(config.indexTitle, 36); // 40 - 4 control code display cols
+  rows.push(...doubleHeightRows(1, titleText, CC.YELLOW, CC.BLUE));
 
-  // Row 2-3: double-height title
-  rows.push(...doubleHeightRows(2, "  " + config.indexTitle));
+  // Row 3: column headers in white
+  const hdrLeft = pad("Channel Name", 15) + "Chan";
+  const hdrRight = "  " + pad("Channel Name", 13) + "Chan";
+  rows.push({ index: 3, content: cc(CC.WHITE) + hdrLeft + hdrRight });
 
-  // Rows 4-20: two-column channel listing
+  // Rows 4-18: two-column channel listing (15 rows)
+  // Left column: yellow names + yellow numbers
+  // Right column: cyan names + cyan numbers
   for (let row = 0; row < CHANNELS_PER_COLUMN; row++) {
     const rowIndex = row + 4;
-    let content = cc(CC.WHITE);
+    let content = "";
 
     for (let col = 0; col < COLUMNS; col++) {
-      if (col > 0) content += " ";
+      const nameColor = col === 0 ? CC.YELLOW : CC.CYAN;
+      content += cc(nameColor);
+
       const channelIndex = col * CHANNELS_PER_COLUMN + row;
       if (channelIndex < channels.length) {
         const ch = channels[channelIndex];
-        content += dotLeader(ch.name, ch.slot + 10, COL_WIDTH);
+        content += dotLeader(ch.name, ch.displayNum, COL_WIDTH);
       } else {
         content += " ".repeat(COL_WIDTH);
       }
@@ -43,14 +52,15 @@ function buildIndexSubpage(channels, subpageIndex, totalSubpages, config) {
     rows.push({ index: rowIndex, content });
   }
 
-  // Row 21: empty or pagination indicator
-  if (totalSubpages > 1 && subpageIndex < totalSubpages - 1) {
-    rows.push(textRow(21, "          More channels follow >>>>", CC.CYAN));
-  }
+  // Row 20-21: instructions in white
+  rows.push(textRow(20, 'Press "1" then Chan.No for Today\'s', CC.WHITE));
+  rows.push(textRow(21, '      "2" then Chan.No for Tomorrow\'s', CC.WHITE));
 
-  // Row 22-23: instructions
-  rows.push(textRow(22, 'Press "1" then Chan.No for Today\'s', CC.GREEN));
-  rows.push(textRow(23, 'Press "2" then Chan.No for Tomorrow\'s', CC.GREEN));
+  // Row 22: "More Channels follow" on every page
+  rows.push({
+    index: 22,
+    content: cc(CC.GREEN) + "More Channels follow " + cc(CC.FLASH) + ">>>>",
+  });
 
   return rows;
 }

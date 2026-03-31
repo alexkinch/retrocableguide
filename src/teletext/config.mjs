@@ -11,13 +11,13 @@ export const TELETEXT_CONFIG = {
   serviceName: "TV Guide",
   indexTitle: "THE CHANNEL GUIDE INDEX",
   indexPage: 0x100,
-  todayPageBase: 0x110,
-  tomorrowPageBase: 0x210,
+  todayPageBase: 0x100,
+  tomorrowPageBase: 0x200,
   scheduleCarouselSeconds: 15,
   indexCarouselSeconds: 10,
 
-  // Channel slot mapping: channel number -> slot offset (0-89)
-  // When autoSlotMap is true, slots are assigned from M3U order
+  // Channel slot mapping: channel number -> BCD page offset (channels 1-99)
+  // When autoSlotMap is true, slots are derived from M3U channel numbers
   autoSlotMap: true,
   channelSlotMap: {},
 };

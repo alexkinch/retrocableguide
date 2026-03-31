@@ -152,13 +152,26 @@ function matchChannelsToSchedules(programmes, xmltvChannels, playlistEntries) {
   });
 }
 
+// Convert a decimal channel number to BCD for teletext page addressing.
+// Channel 1 → 0x01, channel 10 → 0x10, channel 42 → 0x42.
+function toBCD(n) {
+  return ((Math.floor(n / 10) << 4) + (n % 10));
+}
+
+// Returns Map of sourceNum -> { slot (BCD page offset), displayNum (1-99) }
 function buildSlotMap(channelData, config) {
+  const map = new Map();
   if (!config.autoSlotMap && Object.keys(config.channelSlotMap).length > 0) {
-    return config.channelSlotMap;
+    for (const [sourceNum, displayNum] of Object.entries(config.channelSlotMap)) {
+      map.set(Number(sourceNum), { slot: toBCD(displayNum), displayNum });
+    }
+    return map;
   }
-  const map = {};
   channelData.forEach((ch, i) => {
-    if (i < 90) map[ch.num] = i;
+    const displayNum = i + 1;
+    if (displayNum <= 99) {
+      map.set(ch.num, { slot: toBCD(displayNum), displayNum });
+    }
   });
   return map;
 }
@@ -205,11 +218,11 @@ export async function generateTeletext(config) {
 
   // Build channel list with slot assignments
   const channelsWithSlots = channelData
-    .filter((ch) => ch.num in slotMap)
-    .map((ch) => ({
-      ...ch,
-      slot: slotMap[ch.num],
-    }))
+    .filter((ch) => slotMap.has(ch.num))
+    .map((ch) => {
+      const { slot, displayNum } = slotMap.get(ch.num);
+      return { ...ch, slot, displayNum };
+    })
     .sort((a, b) => a.slot - b.slot);
 
   // Generate index page(s)
@@ -241,6 +254,7 @@ export async function generateTeletext(config) {
     pages[`P${todayPage.toString(16).toUpperCase()}.tti`] = generateSchedulePages({
       serviceName: config.serviceName,
       channelName: ch.name,
+      channelNumber: ch.displayNum,
       programmes: todayProgrammes,
       date: today,
       dateLabel: "TODAY",
@@ -257,6 +271,7 @@ export async function generateTeletext(config) {
     pages[`P${tomorrowPage.toString(16).toUpperCase()}.tti`] = generateSchedulePages({
       serviceName: config.serviceName,
       channelName: ch.name,
+      channelNumber: ch.displayNum,
       programmes: tomorrowProgrammes,
       date: tomorrow,
       dateLabel: "TOMORROW",

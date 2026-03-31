@@ -127,20 +127,22 @@ A standalone teletext page generator lives in `src/teletext/` (all `.mjs` files)
 - `serviceName`: header text on all pages (default `"TV Guide"`)
 - `indexTitle`: double-height title on the index page (default `"THE CHANNEL GUIDE INDEX"`)
 - `indexPage`: `0x100`
-- `todayPageBase`: `0x110` — today schedule pages start here
-- `tomorrowPageBase`: `0x210` — tomorrow schedule pages start here
+- `todayPageBase`: `0x100` — today schedule pages start here (channel N → page 1NN)
+- `tomorrowPageBase`: `0x200` — tomorrow schedule pages start here (channel N → page 2NN)
 - `scheduleCarouselSeconds`: carousel cycle time for schedule pages (default `15`)
 - `indexCarouselSeconds`: carousel cycle time for index pages (default `10`)
-- `autoSlotMap`: `true` — auto-assign channel slots from M3U order
-- `channelSlotMap`: manual override `{ channelNum: slotOffset }`
+- `autoSlotMap`: `true` — auto-assign sequential channel numbers (1–99) from M3U order
+- `channelSlotMap`: manual override `{ sourceChannelNum: displayChannelNum }`
 
 ### Page Numbering
 
-- Page 100: Channel Guide Index (carousel subpages if >34 channels)
-- Pages 110–199: today's schedules (slot 0 = page 110, slot 1 = 111, etc.)
-- Pages 210–299: tomorrow's schedules (slot 0 = page 210, etc.)
+- Page 100: Channel Guide Index (carousel subpages if >30 channels)
+- Pages 101–199: today's schedules (channel 1 = page 101, channel 42 = page 142, etc.)
+- Pages 201–299: tomorrow's schedules (channel 1 = page 201, channel 42 = page 242, etc.)
 
-User navigation: press `1` then slot number for today, `2` then slot number for tomorrow.
+Channel numbers are assigned sequentially (1–99) from M3U order after group filtering. Page offsets use BCD encoding so decimal channel numbers map directly to teletext page numbers (e.g. channel 42 → BCD `0x42` → page `0x142` displays as "142").
+
+User navigation: press `1` then channel number for today, `2` then channel number for tomorrow.
 
 ### Usage
 
@@ -171,7 +173,7 @@ cd ~/Projects/TheMarco/teletext && npm start
 - Header colors and contrast may still want tiny calibration against additional captures.
 - The top-left channel/logo/programme panel may still need small proportional tuning depending on new references.
 - `public/guide-logo.png` is now unused and can be deleted.
-- Teletext channel-to-page mapping may need tuning for specific channel lineups.
+- Teletext channel-to-page mapping uses BCD encoding; channels beyond 99 are not supported.
 - Teletext page output needs real-world validation on vbit2/Raspberry Pi.
 
 ## Things Not To Break
