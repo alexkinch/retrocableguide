@@ -34,4 +34,7 @@ function guideApiPlugin() {
 
 export default defineConfig({
   plugins: [react(), guideApiPlugin()],
+  server: {
+    allowedHosts: true,
+  },
 });
