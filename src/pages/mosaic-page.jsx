@@ -6,6 +6,7 @@ import { CrtOverlay } from "../components/crt-overlay.jsx";
 
 const FRAME_WIDTH = 720;
 const FRAME_HEIGHT = 576;
+const ACTION_SAFE_SCALE = 0.9;
 const TILE_WIDTH = 180;
 const TILE_HEIGHT = 144;
 const PROMO_WIDTH = 360;
@@ -152,6 +153,15 @@ export default function MosaicPage() {
         position: "relative",
         overflow: "hidden",
         background: "#000000",
+      }}
+    >
+    <div
+      style={{
+        width: `${FRAME_WIDTH}px`,
+        height: `${FRAME_HEIGHT}px`,
+        transform: `scale(${ACTION_SAFE_SCALE})`,
+        transformOrigin: "center center",
+        position: "relative",
         textShadow: TEXT_OUTLINE,
       }}
     >
@@ -180,6 +190,7 @@ export default function MosaicPage() {
 
       {audioUrl ? <StreamMedia url={audioUrl} muted={false} audioOnly /> : null}
       <CrtOverlay />
+    </div>
     </div>
   );
 }
