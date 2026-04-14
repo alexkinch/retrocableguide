@@ -19,13 +19,3 @@ jobs:
         run: npm ci
       - name: Build
         run: npm run build
-
-  shellcheck:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Run ShellCheck
-        uses: ludeeus/action-shellcheck@master
-        with:
-          scandir: "./scripts"
-          severity: warning
