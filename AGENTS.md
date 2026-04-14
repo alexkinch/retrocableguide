@@ -107,78 +107,9 @@ All settings live in `src/config.js` (`APP_CONFIG`):
 - HLS preview uses `hls.js`.
 - Shared TS/HLS tile playback logic lives in `src/components/stream-media.jsx`.
 
-## Teletext TTI Generator
+## Teletext
 
-A standalone teletext page generator lives in `src/teletext/` (all `.mjs` files) with CLI scripts in `scripts/`.
-
-### Files
-
-- `src/teletext/tti-writer.mjs` — control codes, OL line builder, page/carousel assembly
-- `src/teletext/page-builder.mjs` — layout utilities (dot leaders, separators, programme rows, fastext bar)
-- `src/teletext/index-page.mjs` — Channel Guide Index page generator (two-column, carousel)
-- `src/teletext/schedule-page.mjs` — per-channel schedule page generator (today/tomorrow, carousel)
-- `src/teletext/generator.mjs` — orchestrator: fetches M3U+XMLTV, matches channels, generates all pages
-- `src/teletext/config.mjs` — teletext-specific configuration
-- `scripts/generate-teletext.mjs` — CLI: generates `.tti` files from live feed data (one-shot)
-- `scripts/teletext-server.mjs` — long-running server: regenerates `.tti` files on a timer (default 15m)
-- `scripts/build-teletext-t42.mjs` — CLI: compiles `.tti` files into a `.t42` binary (requires `~/Projects/TheMarco/teletext`)
-
-### Teletext Config (`src/teletext/config.mjs`)
-
-- `serviceName`: header text on all pages (default `"TV Guide"`)
-- `indexTitle`: double-height title on the index page (default `"THE CHANNEL GUIDE INDEX"`)
-- `indexPage`: `0x100`
-- `todayPageBase`: `0x100` — today schedule pages start here (channel N → page 1NN)
-- `tomorrowPageBase`: `0x200` — tomorrow schedule pages start here (channel N → page 2NN)
-- `scheduleCarouselSeconds`: carousel cycle time for schedule pages (default `15`)
-- `indexCarouselSeconds`: carousel cycle time for index pages (default `10`)
-- `autoSlotMap`: `true` — auto-assign sequential channel numbers (1–99) from M3U order
-- `channelSlotMap`: manual override `{ sourceChannelNum: displayChannelNum }`
-
-### Page Numbering
-
-- Page 100: Channel Guide Index (carousel subpages if >30 channels)
-- Pages 101–199: today's schedules (channel 1 = page 101, channel 42 = page 142, etc.)
-- Pages 201–299: tomorrow's schedules (channel 1 = page 201, channel 42 = page 242, etc.)
-
-Channel numbers are assigned sequentially (1–99) from M3U order after group filtering. Page offsets use BCD encoding so decimal channel numbers map directly to teletext page numbers (e.g. channel 42 → BCD `0x42` → page `0x142` displays as "142").
-
-User navigation: press `1` then channel number for today, `2` then channel number for tomorrow.
-
-### Usage
-
-```bash
-# Generate .tti files from live XMLTV/M3U data (one-shot)
-node scripts/generate-teletext.mjs --output-dir ./teletext-pages
-
-# Run as a long-running server, regenerating every 15 minutes
-# Point --output-dir at vbit2's pages directory for live updates
-node scripts/teletext-server.mjs --output-dir ./teletext-pages --interval 15
-
-# Compile to .t42 for browser viewer (not needed for vbit2, which reads .tti directly)
-node scripts/build-teletext-t42.mjs --input-dir ./teletext-pages
-
-# View in TheMarco's browser viewer (load the .t42 via its "Load .t42 file" button)
-cd ~/Projects/TheMarco/teletext && npm start
-```
-
-### Schedule Page Behaviour
-
-Based on analysis of off-air TV Today captures (23 Jan 1999):
-
-- **Broadcast day**: "Today" runs 06:00–06:00, capturing the overnight tail from the previous evening. "Tomorrow" runs midnight–midnight (full calendar day).
-- **No time-trimming**: the full day's schedule is always shown; past programmes are not removed.
-- **Row 23 pagination**: single-page schedules have a blank row 23. Multi-page carousels show "Later programmes follow>>>>" on earlier subpages, "Earlier programmes follow>>>>" on the last subpage.
-- **Date header spans**: when a subpage contains programmes after midnight, the header shows both days (e.g. "Sat 23 Jan - Sun 24 Jan").
-
-### Technical Notes
-
-- Self-contained: own M3U/XMLTV parsing, no imports from `src/guide/`
-- TTI control codes use `\xNN` hex escape notation (compatible with both vbit2 and TheMarco's viewer)
-- Double-height rows emit both top and bottom half rows
-- Fastext links: Red=Prev channel, Green=Next channel, Yellow=Index, Cyan=Toggle day
-- The `.mjs` extension is required because the main project is CJS but these files use ESM
-- vbit2 reads `.tti` files directly from a directory; the `.t42` compile step is only needed for browser viewers
+The teletext page generator now lives in its own sibling repo at `/Users/alexkinch/Projects/alexkinch/retrocableguide-teletext` (GitHub: `alexkinch/retrocableguide-teletext`). It was extracted from this project because it shares no runtime code and can run independently with its own feed config. Do not re-add teletext code to this repo.
 
 ## Known Remaining Issues / Likely Next Steps
 
@@ -187,9 +118,7 @@ Based on analysis of off-air TV Today captures (23 Jan 1999):
 - Calendar badge could still be pushed closer to the exact reference if needed.
 - Header colors and contrast may still want tiny calibration against additional captures.
 - The top-left channel/logo/programme panel may still need small proportional tuning depending on new references.
-- `public/guide-logo.png` is now unused and can be deleted.
-- Teletext channel-to-page mapping uses BCD encoding; channels beyond 99 are not supported.
-- Teletext page output needs real-world validation on vbit2/Raspberry Pi.
+- `src/pages/guide-page.jsx` is ~1300 lines and is a good candidate for splitting into layout constants, promos, and preview/listings subcomponents under `src/pages/guide/`.
 
 ## Things Not To Break
 

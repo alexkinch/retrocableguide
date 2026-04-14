@@ -135,48 +135,7 @@ promos: [
 
 ## Teletext
 
-A standalone teletext page generator produces TTI files compatible with [vbit2](https://github.com/peterkvt80/vbit2) for output on a Raspberry Pi, or `.t42` files for browser-based viewers. The page layout is modelled on off-air captures of the cable channel guide service from 1999.
-
-### Pages
-
-| Page | Content |
-|------|---------|
-| 100 | Channel Guide Index (carousel if >30 channels) |
-| 101–199 | Today's schedules (channel 1 = page 101, channel 42 = page 142, etc.) |
-| 201–299 | Tomorrow's schedules (same mapping) |
-
-Schedule pages use a broadcast-day model: "today" runs 06:00–06:00 (capturing the overnight tail), "tomorrow" runs midnight–midnight. Multi-page schedules carousel with "Earlier/Later programmes follow>>>>" indicators. The date header spans both days when programmes cross midnight (e.g. "Sat 23 Jan - Sun 24 Jan").
-
-### Running
-
-```bash
-# One-shot generation
-node scripts/generate-teletext.mjs --output-dir ./teletext-pages
-
-# Long-running server (regenerates every 15 minutes)
-# Point --output-dir at vbit2's pages directory for live updates
-node scripts/teletext-server.mjs --output-dir /path/to/vbit2/pages --interval 15
-
-# Compile to .t42 for browser viewers (not needed for vbit2)
-node scripts/build-teletext-t42.mjs --input-dir ./teletext-pages
-```
-
-### Teletext Config
-
-All teletext settings live in [`src/teletext/config.mjs`](./src/teletext/config.mjs):
-
-| Key | Default | Description |
-|-----|---------|-------------|
-| `m3uUrl` / `xmltvUrl` | `"…"` | Feed endpoints (separate from the main guide config) |
-| `allowedGroups` | `[…]` | M3U group filter |
-| `serviceName` | `"TV Guide"` | Header text on all pages |
-| `indexTitle` | `"THE CHANNEL GUIDE INDEX"` | Double-height title on the index page |
-| `todayPageBase` | `0x100` | Today schedule pages start here |
-| `tomorrowPageBase` | `0x200` | Tomorrow schedule pages start here |
-| `scheduleCarouselSeconds` | `15` | Carousel cycle time for schedule pages |
-| `indexCarouselSeconds` | `10` | Carousel cycle time for index pages |
-| `autoSlotMap` | `true` | Auto-assign channel numbers 1–99 from M3U order |
-| `channelSlotMap` | `{}` | Manual override `{ sourceNum: displayNum }` |
+The teletext page generator (for vbit2 and browser-based viewers) used to live at `src/teletext/` in this repo but was split out into its own sibling project: [retrocableguide-teletext](https://github.com/alexkinch/retrocableguide-teletext). It runs independently with its own M3U/XMLTV feed config and has no runtime dependency on this React app.
 
 ## Project Structure
 
@@ -191,20 +150,9 @@ src/
 │   ├── client.js              # Guide data fetcher
 │   ├── xmltv.js               # XMLTV parser
 │   └── demoData.js            # Fallback demo data
-├── pages/
-│   ├── guide-page.jsx         # Main retro guide page
-│   └── mosaic-page.jsx        # Mosaic wall page
-└── teletext/
-    ├── config.mjs             # Teletext-specific configuration
-    ├── generator.mjs           # Orchestrator: fetch feeds, match channels, generate pages
-    ├── index-page.mjs          # Channel Guide Index page generator
-    ├── schedule-page.mjs       # Per-channel schedule page generator
-    ├── page-builder.mjs        # Layout utilities (separators, programme rows, fastext)
-    └── tti-writer.mjs          # Control codes, OL line builder, page/carousel assembly
-scripts/
-├── generate-teletext.mjs      # CLI: one-shot .tti generation
-├── teletext-server.mjs        # CLI: long-running .tti regeneration server
-└── build-teletext-t42.mjs     # CLI: compile .tti → .t42
+└── pages/
+    ├── guide-page.jsx         # Main retro guide page
+    └── mosaic-page.jsx        # Mosaic wall page
 ```
 
 ## Useful Commands
